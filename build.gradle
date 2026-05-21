@@ -147,37 +147,51 @@ tasks.named('jacocoTestReport') {
 			'br/edu/fateczl/tcc/util/**'
 		])
 	}))
-    doLast {
-        def xmlReport = file("${layout.buildDirectory.get()}/reports/jacoco/test/jacocoTestReport.xml")
-        if (xmlReport.exists()) {
-            def content = xmlReport.text
-            def lineMatcher = content =~ /<counter type="LINE" missed="(\d+)" covered="(\d+)"\/>/
-            def branchMatcher = content =~ /<counter type="BRANCH" missed="(\d+)" covered="(\d+)"\/>/
+}
 
-            def lineCovered = 0, lineMissed = 0, branchCovered = 0, branchMissed = 0
-            while (lineMatcher.find()) {
-                lineMissed = lineMatcher.group(1).toInteger()
-                lineCovered = lineMatcher.group(2).toInteger()
-            }
-            while (branchMatcher.find()) {
-                branchMissed = branchMatcher.group(1).toInteger()
-                branchCovered = branchMatcher.group(2).toInteger()
-            }
+tasks.register('printJacocoCoverage') {
+	dependsOn tasks.named('jacocoTestReport')
+	outputs.upToDateWhen { false }
+	doLast {
+		def xmlReport = file("${layout.buildDirectory.get()}/reports/jacoco/test/jacocoTestReport.xml")
+		if (!xmlReport.exists()) {
+			println ''
+			println 'JaCoCo XML não encontrado. Execute ./gradlew test jacocoTestReport primeiro.'
+			return
+		}
 
-            def lineTotal = lineCovered + lineMissed
-            def branchTotal = branchCovered + branchMissed
-            def linePct = lineTotal > 0 ? String.format("%.1f", (lineCovered * 100.0 / lineTotal)) : "0.0"
-            def branchPct = branchTotal > 0 ? String.format("%.1f", (branchCovered * 100.0 / branchTotal)) : "0.0"
+		def content = xmlReport.text
+		def lineMatcher = content =~ /<counter type="LINE" missed="(\d+)" covered="(\d+)"\/>/
+		def branchMatcher = content =~ /<counter type="BRANCH" missed="(\d+)" covered="(\d+)"\/>/
 
-            println ""
-            println "=".repeat(60)
-            println "COBERTURA DE CODIGO (JaCoCo)"
-            println "=".repeat(60)
-            println "Linhas:    ${linePct}% (${lineCovered}/${lineTotal})"
-            println "Branches:  ${branchPct}% (${branchCovered}/${branchTotal})"
-            println "=".repeat(60)
-        }
-    }
+		def lineCovered = 0, lineMissed = 0, branchCovered = 0, branchMissed = 0
+		while (lineMatcher.find()) {
+			lineMissed = lineMatcher.group(1).toInteger()
+			lineCovered = lineMatcher.group(2).toInteger()
+		}
+		while (branchMatcher.find()) {
+			branchMissed = branchMatcher.group(1).toInteger()
+			branchCovered = branchMatcher.group(2).toInteger()
+		}
+
+		def lineTotal = lineCovered + lineMissed
+		def branchTotal = branchCovered + branchMissed
+		def linePct = lineTotal > 0 ? String.format("%.1f", (lineCovered * 100.0 / lineTotal)) : "0.0"
+		def branchPct = branchTotal > 0 ? String.format("%.1f", (branchCovered * 100.0 / branchTotal)) : "0.0"
+
+		println ''
+		println '='.repeat(60)
+		println 'COBERTURA DE CODIGO (JaCoCo)'
+		println '='.repeat(60)
+		println "Linhas:    ${linePct}% (${lineCovered}/${lineTotal})"
+		println "Branches:  ${branchPct}% (${branchCovered}/${branchTotal})"
+		println "Relatório:  ${layout.buildDirectory.get()}/reports/jacoco/test/html/index.html"
+		println '='.repeat(60)
+	}
+}
+
+tasks.named('jacocoTestReport') {
+	finalizedBy tasks.named('printJacocoCoverage')
 }
 
 tasks.named('jacocoTestCoverageVerification') {
