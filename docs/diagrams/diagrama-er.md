@@ -12,8 +12,8 @@ erDiagram
     CLIENTE {
         bigint id PK
         varchar nome
-        varchar cpf_cnpj UK
-        varchar email UK
+        varchar cpf_cnpj
+        varchar email
         varchar celular
         varchar sexo
         date data_cadastro
@@ -87,14 +87,14 @@ erDiagram
     }
 
     MEDIDA_MASCULINA {
-        bigint id PK_FK
+        bigint id PK, FK
         decimal colarinho
         decimal barra
         decimal torax
     }
 
     MEDIDA_FEMININA {
-        bigint id PK_FK
+        bigint id PK, FK
         decimal altura_busto
         decimal raio_busto
         decimal corpo
