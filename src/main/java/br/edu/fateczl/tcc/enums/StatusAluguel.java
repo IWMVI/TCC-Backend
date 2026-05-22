@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum StatusAluguel implements DisplayEnum {
     ATIVO("Ativo"),
+    ATRASO("Em Atraso"),
     CONCLUIDO("Concluído"),
     CANCELADO("Cancelado");
 

@@ -92,6 +92,7 @@ class AluguelControllerTest {
                 LocalDate.now().plusDays(7),
                 AlugueisDataBuilder.VALOR_TRAJE_DEFAULT,
                 BigDecimal.ZERO,
+                BigDecimal.ZERO,
                 "Observacao de teste",
                 StatusAluguel.ATIVO,
                 TipoOcasiao.FORMATURA,
@@ -430,14 +431,14 @@ class AluguelControllerTest {
         @Test
         void deve_retornar400_quando_aluguelNaoEstaAtivo() throws Exception {
             when(service.atualizar(eq(AlugueisDataBuilder.ALUGUEL_ID_DEFAULT), any(AluguelUpdateRequest.class)))
-                    .thenThrow(new BusinessException("Só é possível alterar alugueis ATIVOS"));
+                    .thenThrow(new BusinessException("Só é possível alterar aluguéis ATIVOS ou EM ATRASO"));
 
             mockMvc.perform(put("/alugueis/{id}", AlugueisDataBuilder.ALUGUEL_ID_DEFAULT)
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(updateRequestValido)))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.message").value("Só é possível alterar alugueis ATIVOS"));
+                    .andExpect(jsonPath("$.message").value("Só é possível alterar aluguéis ATIVOS ou EM ATRASO"));
         }
 
         @Test

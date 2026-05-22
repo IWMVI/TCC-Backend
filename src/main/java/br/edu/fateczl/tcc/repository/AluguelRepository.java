@@ -26,6 +26,9 @@ public interface AluguelRepository extends JpaRepository<Aluguel, Long>,
     @Query("SELECT a FROM aluguel a WHERE a.dataDevolucao < CURRENT_DATE AND a.status = :status")
     List<Aluguel> findAlugueisAtrasados(@Param("status") StatusAluguel status);
 
+    @Query("SELECT a FROM aluguel a WHERE a.dataDevolucao >= CURRENT_DATE AND a.status = :status")
+    List<Aluguel> findAlugueisComPrazoVigente(@Param("status") StatusAluguel status);
+
     @Query("SELECT a FROM aluguel a JOIN FETCH a.cliente WHERE a.id = :id")
     Optional<Aluguel> findByIdWithCliente(@Param("id") Long id);
 

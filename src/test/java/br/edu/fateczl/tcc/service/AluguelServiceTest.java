@@ -436,7 +436,7 @@ class AluguelServiceTest {
 
             BusinessException ex = assertThrows(BusinessException.class,
                     () -> service.atualizar(ALUGUEL_ID_DEFAULT, request));
-            assertEquals("Só é possível alterar alugueis ATIVOS", ex.getMessage());
+            assertEquals("Só é possível alterar aluguéis ATIVOS ou EM ATRASO", ex.getMessage());
             verify(aluguelRepository, never()).save(any(Aluguel.class));
         }
 
@@ -729,6 +729,32 @@ class AluguelServiceTest {
         }
 
         @Test
+        @DisplayName("CT31b — multa na devolução deve ser somada ao valor total do aluguel")
+        void ct31b_deve_somar_multa_ao_valor_total_na_devolucao() {
+            ativo.setValorTotal(new BigDecimal("450.00"));
+            BigDecimal multa = new BigDecimal("50.00");
+            DevolucaoRequest dto = new DevolucaoRequest(
+                    LocalDate.now(),
+                    null,
+                    multa,
+                    List.of(new ItemDevolucaoRequest(TRAJE_ID_DEFAULT, CondicaoTraje.BOM)));
+            DevolucaoResponse stubResponse = new DevolucaoResponse(
+                    1L, LocalDate.now(), null, multa, ALUGUEL_ID_DEFAULT);
+            when(aluguelRepository.findById(ALUGUEL_ID_DEFAULT)).thenReturn(Optional.of(ativo));
+            when(trajeRepository.findById(TRAJE_ID_DEFAULT))
+                    .thenReturn(Optional.of(AlugueisDataBuilder.umTrajeDisponivel(TRAJE_ID_DEFAULT)));
+            when(devolucaoService.criar(eq(dto), eq(ativo))).thenReturn(stubResponse);
+
+            service.registrarDevolucao(ALUGUEL_ID_DEFAULT, dto);
+
+            ArgumentCaptor<Aluguel> aluguelCaptor = ArgumentCaptor.forClass(Aluguel.class);
+            verify(aluguelRepository).save(aluguelCaptor.capture());
+            assertEquals(0, new BigDecimal("500.00").compareTo(aluguelCaptor.getValue().getValorTotal()));
+            assertEquals(0, multa.compareTo(aluguelCaptor.getValue().getValorMulta()));
+            assertEquals(StatusAluguel.CONCLUIDO, aluguelCaptor.getValue().getStatus());
+        }
+
+        @Test
         @DisplayName("CT32 — V borda: aluguel ATIVO + itens=null → não atualiza trajes, mas conclui aluguel")
         void ct32_deve_registrarDevolucao_quando_itensNulos() {
             DevolucaoRequest dto = new DevolucaoRequest(
@@ -773,9 +799,30 @@ class AluguelServiceTest {
             // mata mutante linha 207 (path I do equality check): só ATIVOS lançam BusinessException
             BusinessException ex = assertThrows(BusinessException.class,
                     () -> service.registrarDevolucao(ALUGUEL_ID_DEFAULT, dto));
-            assertTrue(ex.getMessage().contains("ATIVOS"));
+            assertTrue(ex.getMessage().contains("ATIVOS") || ex.getMessage().contains("ATRASO"));
             verify(aluguelRepository, never()).save(any(Aluguel.class));
             verify(devolucaoService, never()).criar(any(), any());
+        }
+
+        @Test
+        @DisplayName("CT35 — V: aluguel EM ATRASO pode registrar devolução com multa")
+        void ct35_deve_registrar_devolucao_quando_aluguel_em_atraso() {
+            Aluguel emAtraso = AlugueisDataBuilder.umAluguel()
+                    .comStatus(StatusAluguel.ATRASO)
+                    .buildEntity(cliente);
+            emAtraso.setValorTotal(new BigDecimal("300.00"));
+            DevolucaoRequest dto = new DevolucaoRequest(
+                    LocalDate.now(), null, new BigDecimal("30.00"), null);
+            when(aluguelRepository.findById(ALUGUEL_ID_DEFAULT)).thenReturn(Optional.of(emAtraso));
+            when(devolucaoService.criar(eq(dto), eq(emAtraso)))
+                    .thenReturn(new DevolucaoResponse(1L, LocalDate.now(), null, new BigDecimal("30.00"), ALUGUEL_ID_DEFAULT));
+
+            service.registrarDevolucao(ALUGUEL_ID_DEFAULT, dto);
+
+            ArgumentCaptor<Aluguel> aluguelCaptor = ArgumentCaptor.forClass(Aluguel.class);
+            verify(aluguelRepository).save(aluguelCaptor.capture());
+            assertEquals(0, new BigDecimal("330.00").compareTo(aluguelCaptor.getValue().getValorTotal()));
+            assertEquals(0, new BigDecimal("30.00").compareTo(aluguelCaptor.getValue().getValorMulta()));
         }
     }
 }

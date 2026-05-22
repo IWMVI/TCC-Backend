@@ -6,6 +6,7 @@ import br.edu.fateczl.tcc.dto.aluguel.AluguelRequest;
 import br.edu.fateczl.tcc.dto.aluguel.AluguelResponse;
 import br.edu.fateczl.tcc.dto.aluguel.AluguelUpdateRequest;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class AluguelMapper {
@@ -33,6 +34,10 @@ public class AluguelMapper {
         entity.setOcasiao(dto.ocasiao());
     }
 
+    private static BigDecimal valorMultaOuZero(Aluguel entity) {
+        return entity.getValorMulta() != null ? entity.getValorMulta() : BigDecimal.ZERO;
+    }
+
     public static AluguelResponse toResponse(Aluguel entity) {
         return new AluguelResponse(
                 entity.getId(),
@@ -43,6 +48,7 @@ public class AluguelMapper {
                 entity.getDataDevolucao(),
                 entity.getValorTotal(),
                 entity.getValorDesconto(),
+                valorMultaOuZero(entity),
                 entity.getObservacoes(),
                 entity.getStatus(),
                 entity.getOcasiao(),

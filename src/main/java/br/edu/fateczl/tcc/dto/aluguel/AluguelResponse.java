@@ -19,6 +19,7 @@ public record AluguelResponse(
 
         BigDecimal valorTotal,
         BigDecimal valorDesconto,
+        BigDecimal valorMulta,
 
         String observacoes,
         StatusAluguel status,

@@ -45,6 +45,9 @@ public class Aluguel {
     @Column(precision = 8, scale = 2)
     private BigDecimal valorDesconto;
 
+    @Column(precision = 8, scale = 2, nullable = false)
+    private BigDecimal valorMulta = BigDecimal.ZERO;
+
     @Column(length = 200)
     private String observacoes;
 
@@ -128,6 +131,14 @@ public class Aluguel {
         this.valorDesconto = valorDesconto;
     }
 
+    public BigDecimal getValorMulta() {
+        return valorMulta;
+    }
+
+    public void setValorMulta(BigDecimal valorMulta) {
+        this.valorMulta = valorMulta != null ? valorMulta : BigDecimal.ZERO;
+    }
+
     public String getObservacoes() {
         return observacoes;
     }
@@ -209,6 +220,7 @@ public class Aluguel {
         private LocalDate dataDevolucao;
         private BigDecimal valorTotal;
         private BigDecimal valorDesconto;
+        private BigDecimal valorMulta = BigDecimal.ZERO;
         private String observacoes;
         private StatusAluguel status;
         private TipoOcasiao ocasiao;
@@ -244,6 +256,11 @@ public class Aluguel {
             return this;
         }
 
+        public AluguelBuilder valorMulta(BigDecimal valorMulta) {
+            this.valorMulta = valorMulta != null ? valorMulta : BigDecimal.ZERO;
+            return this;
+        }
+
         public AluguelBuilder observacoes(String observacoes) {
             this.observacoes = observacoes;
             return this;
@@ -272,6 +289,7 @@ public class Aluguel {
             aluguel.dataDevolucao = this.dataDevolucao;
             aluguel.valorTotal = this.valorTotal;
             aluguel.valorDesconto = this.valorDesconto;
+            aluguel.valorMulta = this.valorMulta;
             aluguel.observacoes = this.observacoes;
             aluguel.status = this.status;
             aluguel.ocasiao = this.ocasiao;

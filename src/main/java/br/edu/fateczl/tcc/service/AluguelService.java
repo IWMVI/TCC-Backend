@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.EnumSet;
 import java.util.List;
 
 @Service
@@ -42,6 +43,8 @@ public class AluguelService {
     private static final String RESOURCE_ALUGUEL = "Aluguel";
     private static final String RESOURCE_CLIENTE = "Cliente";
     private static final String RESOURCE_TRAJE = "Traje";
+    private static final EnumSet<StatusAluguel> STATUS_EM_ANDAMENTO =
+            EnumSet.of(StatusAluguel.ATIVO, StatusAluguel.ATRASO);
 
     public AluguelService(AluguelRepository aluguelRepository,
                           ClienteRepository clienteRepository,
@@ -79,6 +82,7 @@ public class AluguelService {
         BigDecimal desconto = dto.valorDesconto() != null ? dto.valorDesconto() : BigDecimal.ZERO;
         BigDecimal valorComDesconto = total.subtract(desconto);
         aluguel.setValorTotal(valorComDesconto);
+        aluguel.setValorMulta(BigDecimal.ZERO);
 
         // Verificar se o valor com desconto é negativo
         validarValorComDesconto(valorComDesconto);
@@ -95,12 +99,12 @@ public class AluguelService {
     public AluguelResponse atualizar(Long id, AluguelUpdateRequest dto) {
         Aluguel aluguel = buscarAluguelOuFalhar(id);
 
-        // Só pode alterar se estiver ATIVO
-        if (!aluguel.getStatus().equals(StatusAluguel.ATIVO)) {
-            throw new BusinessException("Só é possível alterar alugueis ATIVOS");
+        if (!STATUS_EM_ANDAMENTO.contains(aluguel.getStatus())) {
+            throw new BusinessException("Só é possível alterar aluguéis ATIVOS ou EM ATRASO");
         }
 
         validarDatas(dto.dataRetirada(), dto.dataDevolucao());
+        atualizarStatusConformePrazo(aluguel, dto.dataDevolucao());
 
         // Validar conflito com os NOVOS itens do DTO
         for (ItemAluguelRequest itemDto : dto.itens()) {
@@ -143,9 +147,12 @@ public class AluguelService {
     // ===============================
     // READ - por ID
     // ===============================
-    @Transactional(readOnly = true)
+    @Transactional
     public AluguelResponse buscarPorId(Long id) {
-        return AluguelMapper.toResponse(buscarAluguelOuFalhar(id));
+        Aluguel aluguel = buscarAluguelOuFalhar(id);
+        sincronizarStatusEmAtraso(aluguel);
+        aluguelRepository.save(aluguel);
+        return AluguelMapper.toResponse(aluguel);
     }
 
 
@@ -163,8 +170,9 @@ public class AluguelService {
     // ===============================
     // READ - com filtros
     // ===============================
-    @Transactional(readOnly = true)
+    @Transactional
     public List<AluguelResponse> listarComFiltros(AluguelFiltroRequest filtro) {
+        sincronizarStatusEmAtraso();
         Specification<Aluguel> specification = Specification
                 .where(AluguelSpecification.comStatus(filtro.status()))
                 .and(AluguelSpecification.comNomeCliente(filtro.nomeCliente()))
@@ -204,8 +212,8 @@ public class AluguelService {
     public DevolucaoResponse registrarDevolucao(Long aluguelId, DevolucaoRequest dto) {
         Aluguel aluguel = buscarAluguelOuFalhar(aluguelId);
 
-        if (!aluguel.getStatus().equals(StatusAluguel.ATIVO)) {
-            throw new BusinessException("Só é possível registrar devolução de aluguéis ATIVOS");
+        if (!STATUS_EM_ANDAMENTO.contains(aluguel.getStatus())) {
+            throw new BusinessException("Só é possível registrar devolução de aluguéis ATIVOS ou EM ATRASO");
         }
 
         // Atualizar a condição de cada traje informada na devolução
@@ -220,10 +228,48 @@ public class AluguelService {
 
         DevolucaoResponse devolucaoResponse = devolucaoService.criar(dto, aluguel);
 
+        BigDecimal multa = dto.valorMulta() != null ? dto.valorMulta() : BigDecimal.ZERO;
+        aluguel.setValorMulta(multa);
+        if (multa.compareTo(BigDecimal.ZERO) > 0) {
+            aluguel.setValorTotal(aluguel.getValorTotal().add(multa));
+        }
+
         aluguel.setStatus(StatusAluguel.CONCLUIDO);
         aluguelRepository.save(aluguel);
 
         return devolucaoResponse;
+    }
+
+    private void sincronizarStatusEmAtraso() {
+        List<Aluguel> paraAtraso = aluguelRepository.findAlugueisAtrasados(StatusAluguel.ATIVO);
+        paraAtraso.forEach(aluguel -> aluguel.setStatus(StatusAluguel.ATRASO));
+        if (!paraAtraso.isEmpty()) {
+            aluguelRepository.saveAll(paraAtraso);
+        }
+
+        List<Aluguel> paraReativar = aluguelRepository.findAlugueisComPrazoVigente(StatusAluguel.ATRASO);
+        paraReativar.forEach(aluguel -> aluguel.setStatus(StatusAluguel.ATIVO));
+        if (!paraReativar.isEmpty()) {
+            aluguelRepository.saveAll(paraReativar);
+        }
+    }
+
+    private void sincronizarStatusEmAtraso(Aluguel aluguel) {
+        if (!STATUS_EM_ANDAMENTO.contains(aluguel.getStatus())) {
+            return;
+        }
+        atualizarStatusConformePrazo(aluguel, aluguel.getDataDevolucao());
+    }
+
+    private void atualizarStatusConformePrazo(Aluguel aluguel, LocalDate dataDevolucaoPrevista) {
+        LocalDate hoje = LocalDate.now();
+        if (dataDevolucaoPrevista.isBefore(hoje)) {
+            aluguel.setStatus(StatusAluguel.ATRASO);
+            return;
+        }
+        if (aluguel.getStatus() == StatusAluguel.ATRASO) {
+            aluguel.setStatus(StatusAluguel.ATIVO);
+        }
     }
 
 

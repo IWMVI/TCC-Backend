@@ -14,7 +14,11 @@ public interface ItemAluguelRepository extends JpaRepository<ItemAluguel, Long> 
 
     List<ItemAluguel> findByTrajeId(Long trajeId);
 
-    @Query("SELECT ia FROM item_aluguel ia WHERE ia.traje.id = :trajeId AND ia.aluguel.status = 'ATIVO'")
+    @Query("""
+        SELECT ia FROM item_aluguel ia
+        WHERE ia.traje.id = :trajeId
+          AND ia.aluguel.status IN ('ATIVO', 'ATRASO')
+        """)
     java.util.Optional<ItemAluguel> findAtivoByTrajeId(@Param("trajeId") Long trajeId);
 
     @Query("SELECT ia FROM item_aluguel ia JOIN FETCH ia.traje WHERE ia.aluguel.id = :aluguelId")
@@ -31,7 +35,7 @@ public interface ItemAluguelRepository extends JpaRepository<ItemAluguel, Long> 
         SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END
         FROM item_aluguel i
         WHERE i.traje.id = :trajeId
-          AND i.aluguel.status = 'ATIVO'
+          AND i.aluguel.status IN ('ATIVO', 'ATRASO')
           AND (:aluguelId IS NULL OR i.aluguel.id <> :aluguelId)
           AND (
                :dataRetirada <= i.aluguel.dataDevolucao
@@ -53,7 +57,7 @@ public interface ItemAluguelRepository extends JpaRepository<ItemAluguel, Long> 
         SELECT i.aluguel.dataRetirada, i.aluguel.dataDevolucao
         FROM item_aluguel i
         WHERE i.traje.id = :trajeId
-          AND i.aluguel.status = 'ATIVO'
+          AND i.aluguel.status IN ('ATIVO', 'ATRASO')
         ORDER BY i.aluguel.dataRetirada
     """)
     List<Object[]> findPeriodosAlugadosByTrajeId(@Param("trajeId") Long trajeId);
