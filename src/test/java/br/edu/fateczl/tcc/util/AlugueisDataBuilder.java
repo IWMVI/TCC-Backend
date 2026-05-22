@@ -284,6 +284,12 @@ public class AlugueisDataBuilder {
 
     public static Traje umTrajeIndisponivel(Long id) {
         Traje traje = umTrajeDisponivel(id);
+        traje.setStatus(StatusTraje.MANUTENCAO);
+        return traje;
+    }
+
+    public static Traje umTrajeAlugado(Long id) {
+        Traje traje = umTrajeDisponivel(id);
         traje.setStatus(StatusTraje.ALUGADO);
         return traje;
     }

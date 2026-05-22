@@ -332,7 +332,8 @@ public class AluguelService {
     }
 
     private void validarTrajeDisponivel(Traje traje) {
-        if (!traje.getStatus().equals(StatusTraje.DISPONIVEL)) {
+        StatusTraje status = traje.getStatus();
+        if (status == StatusTraje.MANUTENCAO || status == StatusTraje.BLOQUEADO) {
             throw new BusinessException("Traje não está disponível");
         }
     }

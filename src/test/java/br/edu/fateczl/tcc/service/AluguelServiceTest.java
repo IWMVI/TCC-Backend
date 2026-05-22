@@ -77,7 +77,7 @@ import static org.mockito.Mockito.when;
  *   C2: dataRetirada          | V2 ≥ hoje                   | I2 < hoje
  *   C3: dataDevolucao         | V3 ≥ dataRetirada           | I3 < dataRetirada
  *   C4: itens.trajeId         | V4 existe                   | I4 não existe
- *   C5: traje.status          | V5 DISPONIVEL               | I5 ≠ DISPONIVEL
+ *   C5: traje.status          | V5 ≠ MANUTENCAO/BLOQUEADO   | I5 MANUTENCAO ou BLOQUEADO
  *   C6: traje no período      | V6 livre                    | I6 ocupado
  *   C7: valorDesconto         | V7 [0, total] (ou null)     | I7 > total
  *   C8: quantidade de itens   | V8 ≥ 1 (1 ou múltiplos)     | (= 0 validado no DTO)
@@ -98,7 +98,8 @@ import static org.mockito.Mockito.when;
  *   CT7  — I2 isolada na borda (retirada=ontem)               → BusinessException "passado"
  *   CT8  — I3 isolada na borda (dev=retirada-1)               → BusinessException "após a retirada"
  *   CT9  — I4 isolada (traje inexistente)                     → ResourceNotFoundException
- *   CT10 — I5 isolada (traje ALUGADO)                         → BusinessException "não está disponível"
+ *   CT10 — I5 isolada (traje MANUTENCAO)                      → BusinessException "não está disponível"
+ *   CT10b — traje ALUGADO + período livre                      → sucesso (disponibilidade por período)
  *   CT11 — I6 isolada (período ocupado)                       → BusinessException "alugado nesse período"
  *   CT12 — I7 isolada na borda (desconto=total+0,01)          → BusinessException "negativo"
  *
@@ -315,7 +316,7 @@ class AluguelServiceTest {
         }
 
         @Test
-        @DisplayName("CT10 — I5 isolada: traje com status ALUGADO, demais VÁLIDAS")
+        @DisplayName("CT10 — I5 isolada: traje em MANUTENCAO, demais VÁLIDAS")
         void ct10_deve_lancarBusinessException_quando_apenasTrajeNaoDisponivel() {
             AluguelRequest request = AlugueisDataBuilder.umAluguel().buildRequest();
             Traje indisponivel = AlugueisDataBuilder.umTrajeIndisponivel(TRAJE_ID_DEFAULT);
@@ -326,6 +327,24 @@ class AluguelServiceTest {
             BusinessException ex = assertThrows(BusinessException.class, () -> service.criar(request));
             assertEquals("Traje não está disponível", ex.getMessage());
             verify(aluguelRepository, never()).save(any(Aluguel.class));
+        }
+
+        @Test
+        @DisplayName("CT10b — traje ALUGADO sem conflito de período: deve criar aluguel")
+        void ct10b_deve_criar_quando_trajeAlugadoMasPeriodoLivre() {
+            AluguelRequest request = AlugueisDataBuilder.umAluguel().buildRequest();
+            Traje trajeAlugado = AlugueisDataBuilder.umTrajeAlugado(TRAJE_ID_DEFAULT);
+
+            when(clienteRepository.findById(CLIENTE_ID_DEFAULT)).thenReturn(Optional.of(cliente));
+            when(trajeRepository.findById(TRAJE_ID_DEFAULT)).thenReturn(Optional.of(trajeAlugado));
+            when(itemAluguelRepository.trajeIndisponivelNoPeriodo(
+                    eq(TRAJE_ID_DEFAULT), any(LocalDate.class), any(LocalDate.class), eq(null)))
+                    .thenReturn(false);
+
+            AluguelResponse response = service.criar(request);
+
+            assertNotNull(response);
+            verify(aluguelRepository).save(any(Aluguel.class));
         }
 
         @Test
@@ -706,7 +725,7 @@ class AluguelServiceTest {
                     1L, LocalDate.now(), "obs", BigDecimal.ZERO, ALUGUEL_ID_DEFAULT);
             // Traje começa ALUGADO de propósito: caso o setStatus(DISPONIVEL) seja
             // removido (mutante linha 216), o status final permaneceria ALUGADO.
-            Traje trajeAlugado = AlugueisDataBuilder.umTrajeIndisponivel(TRAJE_ID_DEFAULT);
+            Traje trajeAlugado = AlugueisDataBuilder.umTrajeAlugado(TRAJE_ID_DEFAULT);
             when(aluguelRepository.findById(ALUGUEL_ID_DEFAULT)).thenReturn(Optional.of(ativo));
             when(trajeRepository.findById(TRAJE_ID_DEFAULT)).thenReturn(Optional.of(trajeAlugado));
             when(devolucaoService.criar(eq(dto), eq(ativo))).thenReturn(stubResponse);
