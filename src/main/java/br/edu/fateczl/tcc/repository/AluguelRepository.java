@@ -8,11 +8,49 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 public interface AluguelRepository extends JpaRepository<Aluguel, Long>,
                                            JpaSpecificationExecutor<Aluguel> {
+
+    long countByStatus(StatusAluguel status);
+
+    @Query("SELECT COALESCE(SUM(a.valorTotal), 0) FROM aluguel a WHERE a.status = :status " +
+           "AND a.dataAluguel BETWEEN :inicio AND :fim")
+    BigDecimal somarValorTotalPorStatusEPeriodo(
+            @Param("status") StatusAluguel status,
+            @Param("inicio") LocalDate inicio,
+            @Param("fim") LocalDate fim);
+
+    @Query("SELECT COALESCE(SUM(a.valorTotal), 0) FROM aluguel a WHERE a.status IN :statuses")
+    BigDecimal somarValorTotalPorStatuses(@Param("statuses") List<StatusAluguel> statuses);
+
+    @Query("SELECT COALESCE(SUM(a.valorDesconto), 0) FROM aluguel a")
+    BigDecimal somarTotalDescontos();
+
+    @Query("SELECT COALESCE(SUM(a.valorMulta), 0) FROM aluguel a")
+    BigDecimal somarTotalMultas();
+
+    @Query("SELECT COALESCE(SUM(a.valorDesconto), 0) FROM aluguel a WHERE a.dataAluguel BETWEEN :inicio AND :fim")
+    BigDecimal somarDescontosPorPeriodo(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim);
+
+    @Query("SELECT COALESCE(SUM(a.valorMulta), 0) FROM aluguel a WHERE a.dataAluguel BETWEEN :inicio AND :fim")
+    BigDecimal somarMultasPorPeriodo(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim);
+
+    @Query("SELECT COALESCE(SUM(a.valorTotal), 0) FROM aluguel a WHERE a.dataAluguel BETWEEN :inicio AND :fim")
+    BigDecimal somarReceitaBrutaPorPeriodo(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim);
+
+    long countByDataAluguelBetween(LocalDate inicio, LocalDate fim);
+
+    @Query("SELECT a.status, COUNT(a), COALESCE(SUM(a.valorTotal), 0) FROM aluguel a " +
+           "WHERE a.dataAluguel BETWEEN :inicio AND :fim GROUP BY a.status")
+    List<Object[]> agregarPorStatusEPeriodo(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim);
+
+    @EntityGraph(attributePaths = {"cliente"})
+    List<Aluguel> findTop5ByOrderByDataAluguelDesc();
 
     List<Aluguel> findByClienteId(Long clienteId);
 

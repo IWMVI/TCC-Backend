@@ -75,6 +75,8 @@ public class GlobalExceptionHandler {
 
         if (mensagem.contains("não encontrado")) return HttpStatus.NOT_FOUND;
         if (mensagem.contains("já cadastrado"))  return HttpStatus.CONFLICT;
+        if (mensagem.contains("não verificado")) return HttpStatus.FORBIDDEN;
+        if (mensagem.contains("Registro público desabilitado")) return HttpStatus.FORBIDDEN;
 
         return HttpStatus.BAD_REQUEST;
     }
