@@ -28,29 +28,9 @@ spring:
     deserialization:
       fail-on-unknown-properties: false
 
-  mail:
-    host: ${MAIL_HOST:}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:}
-    password: ${MAIL_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-
 app:
   seeder:
     enabled: ${SEEDER_ENABLED:false}
-  frontend-url: ${FRONTEND_URL:http://localhost:5173}
-  auth:
-    jwt-secret: ${JWT_SECRET:tcc-dev-secret-change-in-production-min-32-chars}
-    jwt-expiration-ms: ${JWT_EXPIRATION_MS:86400000}
-    registro-publico: ${REGISTRO_PUBLICO:false}
-    admin-email: ${ADMIN_EMAIL:admin@locadora.local}
-    admin-senha: ${ADMIN_SENHA:Admin@123}
-    admin-nome: ${ADMIN_NOME:Administrador}
 
 server:
   port: 8080

@@ -53,7 +53,7 @@ public class Traje {
     @Column(precision = 8, scale = 2, nullable = false)
     private BigDecimal valorItem;
 
-    @Column(length = 20, nullable = false)
+    @Column(length = 10, nullable = false)
     @Enumerated(EnumType.STRING)
     private StatusTraje status;
 

@@ -5,18 +5,13 @@ import br.edu.fateczl.tcc.enums.StatusAluguel;
 import br.edu.fateczl.tcc.enums.TipoOcasiao;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 
 public class AluguelSpecification {
 
     private static final String STATUS = "status";
     private static final String OCASIAO = "ocasiao";
     private static final String DATA_RETIRADA = "dataRetirada";
-    private static final String DATA_ALUGUEL = "dataAluguel";
-    private static final String VALOR_MULTA = "valorMulta";
-    private static final String VALOR_DESCONTO = "valorDesconto";
     private static final String CLIENTE = "cliente";
     private static final String NOME = "nome";
 
@@ -51,33 +46,5 @@ public class AluguelSpecification {
     public static Specification<Aluguel> comOcasiao(TipoOcasiao ocasiao) {
         return (root, query, cb) ->
                 ocasiao == null ? null : cb.equal(root.get(OCASIAO), ocasiao);
-    }
-
-    public static Specification<Aluguel> comStatusIn(List<StatusAluguel> statuses) {
-        return (root, query, cb) ->
-                (statuses == null || statuses.isEmpty()) ? null : root.get(STATUS).in(statuses);
-    }
-
-    public static Specification<Aluguel> comDataAluguelEntre(LocalDate inicio, LocalDate fim) {
-        return (root, query, cb) -> {
-            if (inicio == null && fim == null) {
-                return null;
-            }
-            if (inicio == null) {
-                return cb.lessThanOrEqualTo(root.get(DATA_ALUGUEL), fim);
-            }
-            if (fim == null) {
-                return cb.greaterThanOrEqualTo(root.get(DATA_ALUGUEL), inicio);
-            }
-            return cb.between(root.get(DATA_ALUGUEL), inicio, fim);
-        };
-    }
-
-    public static Specification<Aluguel> comValorMultaPositivo() {
-        return (root, query, cb) -> cb.greaterThan(root.get(VALOR_MULTA), BigDecimal.ZERO);
-    }
-
-    public static Specification<Aluguel> comValorDescontoPositivo() {
-        return (root, query, cb) -> cb.greaterThan(root.get(VALOR_DESCONTO), BigDecimal.ZERO);
     }
 }
